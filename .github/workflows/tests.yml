@@ -12,7 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        # Python 3.8 binaries are available on Ubuntu 22.04, not newer runners.
+        os: [ubuntu-22.04, windows-latest]
         python-version: ['3.8', '3.12', '3.13']
     runs-on: ${{ matrix.os }}
     steps:

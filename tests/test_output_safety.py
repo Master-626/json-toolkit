@@ -78,6 +78,7 @@ def test_output_links_are_preserved(transform, source, tmp_path, kind):
             output.symlink_to(target)
     except (NotImplementedError, OSError) as error:
         pytest.skip("Links unavailable: {}".format(error))
+    original_link_target = os.readlink(str(output)) if kind != "hardlink" else None
     with pytest.raises(FileExistsError):
         transform(str(source), str(output))
     assert source.read_bytes() == original
@@ -85,7 +86,7 @@ def test_output_links_are_preserved(transform, source, tmp_path, kind):
         assert os.path.samefile(str(output), str(source))
     else:
         assert output.is_symlink()
-        assert os.readlink(str(output)) == str(target)
+        assert os.readlink(str(output)) == original_link_target
     if kind == "broken_symlink":
         assert not target.exists()
     assert_no_temporary_files(tmp_path)
