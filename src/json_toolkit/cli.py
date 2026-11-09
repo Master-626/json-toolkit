@@ -4,7 +4,6 @@ CLI interface for json-toolkit.
 
 import click
 import json
-from pathlib import Path
 
 from .core import format_json, minify_json, validate_json, query_path
 
@@ -18,21 +17,27 @@ def main():
 
 @main.command()
 @click.option("-i", "--input", required=True, help="Input JSON file")
-@click.option("-o", "--output", required=True, help="Output JSON file")
+@click.option("-o", "--output", required=True, help="New output JSON file (must not exist)")
 @click.option("--indent", type=int, default=2, help="Indentation spaces")
 @click.option("--sort", is_flag=True, help="Sort keys alphabetically")
 def format(input, output, indent, sort):
     """Format JSON file with pretty printing."""
-    format_json(input, output, indent=indent, sort_keys=sort)
+    try:
+        format_json(input, output, indent=indent, sort_keys=sort)
+    except (OSError, ValueError, TypeError) as error:
+        raise click.ClickException(str(error)) from error
     click.echo(f"✅ Formatted -> {output}")
 
 
 @main.command()
 @click.option("-i", "--input", required=True, help="Input JSON file")
-@click.option("-o", "--output", required=True, help="Output minified JSON file")
+@click.option("-o", "--output", required=True, help="New minified JSON file (must not exist)")
 def minify(input, output):
     """Minify JSON file (remove all whitespace)."""
-    size = minify_json(input, output)
+    try:
+        size = minify_json(input, output)
+    except (OSError, ValueError, TypeError) as error:
+        raise click.ClickException(str(error)) from error
     click.echo(f"✅ Minified -> {output} ({size} bytes)")
 
 

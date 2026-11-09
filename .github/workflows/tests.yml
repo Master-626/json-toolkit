@@ -1,0 +1,26 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Python 3.8 binaries are available on Ubuntu 22.04, not newer runners.
+        os: [ubuntu-22.04, windows-latest]
+        python-version: ['3.8', '3.12', '3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install ".[dev]" build
+      - run: python -m pytest -q
+      - run: python -m build

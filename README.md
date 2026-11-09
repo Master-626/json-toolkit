@@ -37,6 +37,25 @@ json-toolkit format -i raw.json -o sorted.json --sort
 json-toolkit minify -i pretty.json -o minified.json
 ```
 
+### Output safety
+
+`format`, `minify`, and the Python `write_json` helper require a **new output
+path**. They raise an error instead of replacing an existing file, directory,
+symbolic link (including a broken link), or hard link. Input and output cannot
+be the same file. Choose a different output filename to keep the original safe.
+This deliberately changes the previous behavior, which silently overwrote files.
+
+Output is serialized and written to a sibling temporary file before being
+published with an exclusive hard link. Write failures do not expose a partial
+output, and a destination created by another process is not overwritten.
+The destination filesystem must support hard links; otherwise the command fails
+without replacing anything. This is not a power-loss durability guarantee or
+protection against an attacker changing parent directories. A process killed
+before cleanup may leave a `.json-toolkit-*.tmp` file beside the destination.
+If temporary-file cleanup fails, a warning identifies the file to remove and
+whether output was saved. On POSIX systems, new output files have private `0600`
+permissions; adjust them explicitly if another account needs access.
+
 ### Validate JSON
 ```bash
 json-toolkit validate -i data.json
@@ -55,6 +74,9 @@ from json_toolkit import format_json, minify_json, validate_json, query_path
 
 # Format
 format_json("input.json", "output.json", indent=2)
+
+# Sort object keys at every nesting level
+format_json("input.json", "sorted.json", sort_keys=True)
 
 # Minify
 minify_json("input.json", "minified.json")
