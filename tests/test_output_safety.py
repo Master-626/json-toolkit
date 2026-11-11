@@ -77,7 +77,7 @@ def test_output_links_are_preserved(transform, source, tmp_path, kind):
         else:
             output.symlink_to(target)
     except (NotImplementedError, OSError) as error:
-        pytest.skip("Links unavailable: {}".format(error))
+        pytest.skip(f"Links unavailable: {error}")
     original_link_target = os.readlink(str(output)) if kind != "hardlink" else None
     with pytest.raises(FileExistsError):
         transform(str(source), str(output))
@@ -97,7 +97,7 @@ def test_directory_alias_to_input(transform, source, tmp_path):
     try:
         alias.symlink_to(tmp_path, target_is_directory=True)
     except (NotImplementedError, OSError) as error:
-        pytest.skip("Symlinks unavailable: {}".format(error))
+        pytest.skip(f"Symlinks unavailable: {error}")
     original = source.read_bytes()
     with pytest.raises(FileExistsError):
         transform(str(source), str(alias / source.name))
@@ -128,7 +128,7 @@ def test_existing_fifo_is_preserved(transform, source, tmp_path):
     assert_no_temporary_files(tmp_path)
 
 
-@pytest.mark.parametrize("content", [b"{invalid", b"\xff", b'"\\ud800"'])
+@pytest.mark.parametrize("content", [b"{invalid", b"\xff"])
 def test_invalid_input_leaves_no_output(transform, tmp_path, content):
     source = tmp_path / "source.json"
     source.write_bytes(content)
@@ -215,7 +215,7 @@ def test_destination_created_during_write_is_preserved(
             try:
                 Path(dst).symlink_to(source)
             except (NotImplementedError, OSError) as error:
-                pytest.skip("Symlinks unavailable: {}".format(error))
+                pytest.skip(f"Symlinks unavailable: {error}")
         real_link(src, dst)
 
     monkeypatch.setattr(core.os, "link", raced_link)
@@ -329,3 +329,27 @@ def test_output_has_private_permissions(source, tmp_path, transform):
     output = tmp_path / "output.json"
     transform(str(source), str(output))
     assert output.stat().st_mode & 0o777 == 0o600
+
+
+def test_unpaired_surrogate_round_trips_as_utf8(transform, tmp_path):
+    source = tmp_path / "source.json"
+    source.write_text('{"text":"你好","bad":"\\ud800"}', encoding="utf-8")
+    output = tmp_path / "output.json"
+    assert core.validate_json(str(source)) == (True, None)
+    result = transform(str(source), str(output))
+    blob = output.read_bytes()
+    assert result == len(blob)
+    assert "你好".encode() in blob
+    assert b"\\ud800" in blob
+    assert b"\xed\xa0\x80" not in blob
+    assert json.loads(blob.decode("utf-8")) == json.loads(source.read_text(encoding="utf-8"))
+    assert_no_temporary_files(tmp_path)
+
+
+def test_paired_surrogate_emoji_is_written_as_utf8(transform, tmp_path):
+    source = tmp_path / "source.json"
+    source.write_text('"\\uD83D\\uDE00"', encoding="utf-8")
+    output = tmp_path / "output.json"
+    transform(str(source), str(output))
+    assert output.read_bytes() == '"😀"'.encode()
+    assert_no_temporary_files(tmp_path)

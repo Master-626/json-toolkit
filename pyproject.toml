@@ -1,18 +1,19 @@
 [build-system]
-requires = ["hatchling"]
+# Hatchling 1.28+ requires Python 3.10. Stay below that so 3.8 and 3.9 can build.
+requires = ["hatchling>=1.26,<1.28"]
 build-backend = "hatchling.build"
 
 [project]
 name = "json-toolkit"
-version = "0.1.0"
-description = "A powerful JSON processing toolkit - format, minify, validate, query path, convert formats"
+version = "0.1.1"
+description = "Format, minify, validate, and query JSON without overwriting output files"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [
     { name = "Xu Jiaqi", email = "jiaqixu12138@gmail.com" }
 ]
-keywords = ["json", "cli", "formatter", "validator", "jsonpath", "converter"]
+keywords = ["json", "cli", "formatter", "validator", "jsonpath"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -22,10 +23,14 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Utilities",
 ]
+# Click 8.2+ requires Python 3.10. Keep 3.8 and 3.9 on the last compatible release.
 dependencies = [
-    "click>=8.0.0",
+    "click>=8.0.0,<8.2; python_version < '3.10'",
+    "click>=8.0.0; python_version >= '3.10'",
 ]
 
 [project.scripts]
@@ -34,10 +39,28 @@ jtk = "json_toolkit.cli:main"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
+    # pytest 8.4+ requires 3.9, and pytest 9+ requires 3.10.
+    "pytest>=7.0.0,<8.4; python_version < '3.9'",
+    "pytest>=7.0.0,<9; python_version >= '3.9' and python_version < '3.10'",
+    "pytest>=7.0.0; python_version >= '3.10'",
+    "ruff>=0.6.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/Master-626/json-toolkit"
 Repository = "https://github.com/Master-626/json-toolkit"
 Issue-Tracker = "https://github.com/Master-626/json-toolkit/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py38"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["json_toolkit"]
