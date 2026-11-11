@@ -3,9 +3,8 @@ CLI interface for json-toolkit.
 """
 
 import click
-import json
 
-from .core import format_json, minify_json, validate_json, query_path
+from .core import _dumps_json, format_json, minify_json, query_path, validate_json
 
 
 @click.group()
@@ -43,13 +42,20 @@ def minify(input, output):
 
 @main.command()
 @click.option("-i", "--input", required=True, help="Input JSON file")
-def validate(input):
+@click.option(
+    "--reject-duplicates",
+    is_flag=True,
+    help="Fail when an object repeats a key. The default keeps the last value.",
+)
+@click.pass_context
+def validate(ctx, input, reject_duplicates):
     """Validate JSON file syntax."""
-    valid, error = validate_json(input)
+    valid, error = validate_json(input, reject_duplicate_keys=reject_duplicates)
     if valid:
         click.echo("✅ Valid JSON")
-    else:
-        click.echo(f"❌ Invalid JSON: {error}", err=True)
+        return
+    click.echo(f"❌ Invalid JSON: {error}", err=True)
+    ctx.exit(1)
 
 
 @main.command()
@@ -57,8 +63,11 @@ def validate(input):
 @click.option("-p", "--path", required=True, help="Dot-separated path (e.g. 'user.name')")
 def query(input, path):
     """Query JSON by dot-separated path."""
-    result = query_path(input, path)
-    click.echo(json.dumps(result, indent=2, ensure_ascii=False))
+    try:
+        result = query_path(input, path)
+        click.echo(_dumps_json(result, indent=2))
+    except (OSError, ValueError, TypeError) as error:
+        raise click.ClickException(str(error)) from error
 
 
 if __name__ == "__main__":
